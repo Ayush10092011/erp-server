@@ -1,48 +1,150 @@
+
+
 const express = require("express");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
 const cors = require("cors");
+const Razorpay = require("razorpay");
 
 const app = express();
-app.use(express.json());
+
 app.use(cors());
+app.use(express.json());
+
+/* ================= RAZORPAY ================= */
 
 const razorpay = new Razorpay({
-  key_id: "YOUR_KEY_ID",
-  key_secret: "YOUR_SECRET"
+
+  key_id: "rzp_test_Sm1OeLA1MD81zL",
+
+  key_secret:"bHXYjTxikirdFuIzFsCu1t1r"
+
 });
 
-/* CREATE ORDER */
+/* ================= PORT ================= */
+
+const PORT = process.env.PORT || 5000;
+
+/* ================= TEST ROUTE ================= */
+
+app.get("/", (req, res) => {
+
+  res.send("🎓 ERP Backend Running Successfully");
+
+});
+
+/* ================= CREATE ORDER ================= */
+
 app.post("/create-order", async (req, res) => {
 
-  const { amount } = req.body;
+  try {
 
-  const order = await razorpay.orders.create({
-    amount: amount * 100,
-    currency: "INR",
-    receipt: "rcpt_" + Date.now()
+    const { amount } = req.body;
+
+    const options = {
+
+      amount: Number(amount) * 100,
+
+      currency: "INR",
+
+      receipt: "school_fee_receipt"
+
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json(order);
+
+  } catch (err) {
+
+    console.log("Create Order Error:", err);
+
+    res.status(500).json({
+
+      error: "Order creation failed"
+
+    });
+
+  }
+
+});
+
+/* ================= VERIFY PAYMENT ================= */
+
+app.post("/verify", async (req, res) => {
+
+  try {
+
+    const {
+
+      razorpay_payment_id,
+
+      razorpay_order_id,
+
+      razorpay_signature
+
+    } = req.body;
+
+    if (
+
+      razorpay_payment_id &&
+
+      razorpay_order_id &&
+
+      razorpay_signature
+
+    ) {
+
+      res.json({
+
+        status: "success",
+
+        paymentId: razorpay_payment_id
+
+      });
+
+    } else {
+
+      res.status(400).json({
+
+        status: "failed"
+
+      });
+
+    }
+
+  } catch (err) {
+
+    console.log("Verify Error:", err);
+
+    res.status(500).json({
+
+      status: "failed"
+
+    });
+
+  }
+
+});
+
+/* ================= PAYMENT SUCCESS ================= */
+
+app.post("/payment-success", (req, res) => {
+
+  console.log("Payment Success:", req.body);
+
+  res.json({
+
+    success: true,
+
+    message: "🎉 Fee Paid Successfully"
+
   });
 
-  res.json(order);
 });
 
-/* VERIFY */
-app.post("/verify", (req, res) => {
+/* ================= START SERVER ================= */
 
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+app.listen(PORT, () => {
 
-  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  console.log(`🚀 Server running on port ${PORT}`);
 
-  const expected = crypto
-    .createHmac("sha256", "YOUR_SECRET")
-    .update(body)
-    .digest("hex");
-
-  if(expected === razorpay_signature){
-    res.json({status:"success"});
-  } else {
-    res.json({status:"failed"});
-  }
 });
-
-app.listen(5000, () => console.log("Server running on 5000"));
