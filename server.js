@@ -1,4 +1,4 @@
- const express = require("express");
+const express = require("express");
 const cors = require("cors");
 const Razorpay = require("razorpay");
 
@@ -9,64 +9,44 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-/* RAZORPAY */
-
+// 🔐 Razorpay Setup (IMPORTANT: ENV use karo best)
 const razorpay = new Razorpay({
-
-  key_id: "rzp_test_SmsJ4PXCHswizw",
-
-  key_secret: "YAHAN_APNA_SECRET_DALO"
-
+  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_SnDCqpEQ5IGIey",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "uRJWyG0wbISLOC1RlcpiOhVF"
 });
 
-/* TEST */
 
-app.get("/", (req,res)=>{
-
+app.get("/", (req, res) => {
   res.send("Backend Running Successfully 🚀");
-
 });
 
-/* CREATE ORDER */
+// 💰 Create Order
+app.post("/create-order", async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
 
-app.post("/create-order", async (req,res)=>{
-
-  try{
-
-    const { amount } = req.body;
+    if (!amount) {
+      return res.status(400).json({ error: "Amount missing" });
+    }
 
     const options = {
-
       amount: amount * 100,
-
       currency: "INR",
-
-      receipt: "receipt_order"
-
+      receipt: "rcpt_" + Date.now()
     };
 
     const order = await razorpay.orders.create(options);
 
+    console.log("ORDER:", order);
+
     res.json(order);
 
-  }catch(err){
-
+  } catch (err) {
     console.log(err);
-
-    res.status(500).json({
-
-      error: err.message
-
-    });
-
+    res.status(500).json({ error: err.message });
   }
-
 });
 
-/* START SERVER */
-
-app.listen(PORT, ()=>{
-
-  console.log("Server Started");
-
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });
